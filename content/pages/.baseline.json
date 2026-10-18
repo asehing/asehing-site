@@ -18,6 +18,14 @@
     "heading_prefix": "Want to",
     "heading_highlight": "collaborate",
     "heading_suffix": "with me?",
-    "cta_label": "Schedule a Call"
+    "cta_label": "Schedule a Call",
+    "cta_url": "https://cal.com/ase-1/15min"
+  },
+  "social": {
+    "x": "https://x.com/softboyy41",
+    "instagram": "https://www.instagram.com/yanto.visual/",
+    "dribbble": "https://dribbble.com/hoasehing",
+    "behance": "https://www.behance.net/hoasehing",
+    "linkedin": "https://www.linkedin.com/in/hoase-hing-b38b4b245/"
   }
 }

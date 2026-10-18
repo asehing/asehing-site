@@ -2,7 +2,7 @@
 # Semua konten masuk ke situs lewat `npm run build` (build.mjs -> dist/).
 # Work: ditulis ke data CMS biner Framer (work-cms.mjs) sehingga tampilan Framer asli tetap dipakai.
 # Thoughts: markup Framer asli + isi dari content/ (render.mjs).
-# Letakkan di root repo GitHub. Konten diedit lewat Pages CMS, lalu di-commit ke repo.
+# Home/Contact/Social: teks & link diganti di halaman Framer hasil ekspor (build.mjs).
 
 media:
   - name: images
@@ -29,32 +29,35 @@ content:
         order: desc
       search: [title, category]
     fields:
-      - { name: title, label: Title, type: string, required: true }
+      - { name: title, label: Title, type: string, required: true, description: "Nama project yang tampil di kartu dan halaman detail." }
       - name: slug
         label: Slug
         type: string
         required: true
+        description: "Bagian URL, mis. my-project -> /work/my-project. Huruf kecil, angka, tanda hubung. JANGAN diubah untuk project yang sudah tayang (URL lama akan mati)."
         pattern:
           regex: "^[a-z0-9]+(-[a-z0-9]+)*$"
           message: "Huruf kecil, angka, dan tanda hubung saja."
-      - { name: image, label: Cover image, type: image, media: images, required: true }
-      - { name: year, label: Year, type: string, required: true }
+      - { name: image, label: Cover image, type: image, media: images, required: true, description: "Rasio 4:3 / 1:1 / 4:5 sesuai Format. Lebar maksimal ±2000px agar halaman tetap cepat." }
+      - { name: year, label: Year, type: string, required: true, description: "Mis. 2025." }
       - name: category
         label: Category
         type: select
         required: true
+        description: "Hanya kategori yang ada. Kategori baru ditolak saat build."
         options:
           values: [Graphic Design, UIX, Social Media Design, Exploration, Case Study]
       - name: format
         label: Format (card shape)
         type: select
+        description: "Bentuk kartu di galeri: Landscape (lebar), Square (kotak), Portrait (tegak)."
         options:
           values: [Landscape, Square, Portrait]
         default: Landscape
-      - { name: summary, label: Summary, type: string }
-      - { name: client, label: Client, type: string }
-      - { name: role, label: Role, type: string }
-      - { name: in_progress, label: In progress, type: boolean }
+      - { name: summary, label: Summary, type: string, description: "Satu kalimat ringkas (opsional)." }
+      - { name: client, label: Client, type: string, description: "Nama klien (opsional)." }
+      - { name: role, label: Role, type: string, description: "Peran Anda di project ini (opsional)." }
+      - { name: in_progress, label: In progress, type: boolean, description: "Centang bila project belum selesai." }
 
   # ---------- Thought (blog / writing) ----------
   - name: thought
@@ -72,10 +75,10 @@ content:
         order: desc
       search: [title]
     fields:
-      - { name: title, label: Title, type: string, required: true }
-      - { name: date, label: Date, type: date, required: true }
-      - { name: cover, label: Cover image, type: image, media: images }
-      - { name: body, label: Content, type: rich-text }
+      - { name: title, label: Title, type: string, required: true, description: "Judul artikel. Otomatis jadi bagian URL." }
+      - { name: date, label: Date, type: date, required: true, description: "Tanggal tayang. Daftar diurutkan dari yang terbaru." }
+      - { name: cover, label: Cover image, type: image, media: images, description: "Opsional. Lebar maksimal ±2000px." }
+      - { name: body, label: Content, type: rich-text, description: "Isi artikel. Paragraf, kutipan, cetak tebal/miring didukung." }
 
   # ---------- Categories ----------
   - name: categories
@@ -88,29 +91,36 @@ content:
         label: Categories
         type: object
         list: true
+        description: "Hanya referensi. Daftar kategori di situs tidak berubah dari sini."
         fields:
           - { name: name, label: Name, type: string, required: true }
           - { name: slug, label: Slug, type: string, required: true }
 
   # ---------- Static pages ----------
+  # Setiap field = satu potongan teks di halaman Home. Contoh tampilan:
+  #   Hi, I’m Ase!                                         (greeting + name)
+  #   I care less about making things louder               (tagline_line1)
+  #   and more about making them clearer.                  (tagline_line2)
+  #   I’m a Visual Designer creating brands, interfaces,   (role_prefix, role, specialties)
+  #   and campaigns with clarity, restraint, and intention. (values)
   - name: home
     label: Home page
     type: file
     path: content/pages/home.yml
     format: yaml
     fields:
-      - { name: greeting, label: Greeting, type: string }
-      - { name: name, label: Name, type: string }
-      - { name: tagline_line1, label: Tagline line 1, type: string }
-      - { name: tagline_line2, label: Tagline line 2, type: string }
-      - { name: role_prefix, label: Role prefix, type: string }
-      - { name: role, label: Role, type: string }
-      - { name: specialties, label: Specialties, type: string }
-      - { name: values, label: Values, type: string }
-      - { name: footer_cta, label: Footer CTA text, type: string }
-      - { name: email, label: Email, type: string }
-      - { name: follow_label, label: Follow label, type: string }
-      - { name: copyright, label: Copyright, type: string }
+      - { name: greeting, label: "Sapaan (Hi, I’m …)", type: string, description: "Teks sebelum nama." }
+      - { name: name, label: "Nama (… Ase!)", type: string }
+      - { name: tagline_line1, label: "Tagline baris 1", type: string, description: "Baris atas kalimat besar di hero." }
+      - { name: tagline_line2, label: "Tagline baris 2", type: string, description: "Baris bawah kalimat besar di hero." }
+      - { name: role_prefix, label: "Pembuka peran (I’m a …)", type: string }
+      - { name: role, label: "Peran (… Visual Designer …)", type: string }
+      - { name: specialties, label: "Keahlian (… brands, interfaces, and campaigns …)", type: string }
+      - { name: values, label: "Nilai (… clarity, restraint, and intention.)", type: string }
+      - { name: footer_cta, label: "Ajakan footer (Drop me a line at …)", type: string }
+      - { name: email, label: "Email (dipakai di Home & Contact)", type: string }
+      - { name: follow_label, label: "Label sosial (Follow us on …)", type: string }
+      - { name: copyright, label: "Copyright (©asehing)", type: string }
 
   - name: contact
     label: Contact page
@@ -118,8 +128,21 @@ content:
     path: content/pages/contact.yml
     format: yaml
     fields:
-      - { name: email, label: Email, type: string }
-      - { name: heading_prefix, label: Heading prefix, type: string }
-      - { name: heading_highlight, label: Heading highlight word, type: string }
-      - { name: heading_suffix, label: Heading suffix, type: string }
-      - { name: cta_label, label: Button label, type: string }
+      - { name: email, label: "Email", type: string }
+      - { name: heading_prefix, label: "Judul bagian 1 (Want to …)", type: string }
+      - { name: heading_highlight, label: "Judul kata sorot (… collaborate …)", type: string }
+      - { name: heading_suffix, label: "Judul bagian 3 (… with me?)", type: string }
+      - { name: cta_label, label: "Teks tombol", type: string }
+      - { name: cta_url, label: "Link tombol (booking)", type: string, description: "Mis. https://cal.com/nama/15min" }
+
+  - name: social
+    label: Social links
+    type: file
+    path: content/pages/social.yml
+    format: yaml
+    fields:
+      - { name: x, label: X URL, type: string, description: "Dipakai di Home dan Contact. Awali dengan https://" }
+      - { name: instagram, label: Instagram URL, type: string }
+      - { name: dribbble, label: Dribbble URL, type: string }
+      - { name: behance, label: Behance URL, type: string }
+      - { name: linkedin, label: LinkedIn URL, type: string }
