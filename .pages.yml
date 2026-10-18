@@ -1,0 +1,115 @@
+# Pages CMS config — https://pagescms.org/docs/configuration/
+# Semua konten masuk ke situs lewat `npm run build` (build.mjs -> dist/).
+# Work & Thoughts di-render dari content/ oleh render.mjs (halaman statis sederhana).
+# Letakkan di root repo GitHub. Konten diedit lewat Pages CMS, lalu di-commit ke repo.
+
+media:
+  - name: images
+    label: Images
+    input: site/_fr/fu/images
+    output: /_fr/fu/images
+    extensions: [png, jpg, jpeg, webp, gif, svg, avif]
+    categories: [image]
+
+content:
+  # ---------- Work (project portfolio) ----------
+  - name: work
+    label: Work
+    type: collection
+    path: content/work
+    filename: "{fields.slug}.md"
+    format: yaml-frontmatter
+    view:
+      fields: [image, title, category, year]
+      primary: title
+      sort: [year, title]
+      default:
+        sort: year
+        order: desc
+      search: [title, category]
+    fields:
+      - { name: title, label: Title, type: string, required: true }
+      - name: slug
+        label: Slug
+        type: string
+        required: true
+        pattern:
+          regex: "^[a-z0-9]+(-[a-z0-9]+)*$"
+          message: "Huruf kecil, angka, dan tanda hubung saja."
+      - { name: image, label: Cover image, type: image, media: images, required: true }
+      - { name: year, label: Year, type: string, required: true }
+      - name: category
+        label: Category
+        type: select
+        required: true
+        options:
+          values: [Graphic Design, UIX, Social Media Design, Exploration, Case Study]
+      - { name: body, label: Case study, type: rich-text }
+
+  # ---------- Thought (blog / writing) ----------
+  - name: thought
+    label: Thoughts
+    type: collection
+    path: content/thought
+    filename: "{fields.title}.md"
+    format: yaml-frontmatter
+    view:
+      fields: [title, date]
+      primary: title
+      sort: [date, title]
+      default:
+        sort: date
+        order: desc
+      search: [title]
+    fields:
+      - { name: title, label: Title, type: string, required: true }
+      - { name: date, label: Date, type: date, required: true }
+      - { name: cover, label: Cover image, type: image, media: images }
+      - { name: body, label: Content, type: rich-text }
+
+  # ---------- Categories ----------
+  - name: categories
+    label: Categories
+    type: file
+    path: content/categories.json
+    format: json
+    fields:
+      - name: categories
+        label: Categories
+        type: object
+        list: true
+        fields:
+          - { name: name, label: Name, type: string, required: true }
+          - { name: slug, label: Slug, type: string, required: true }
+
+  # ---------- Static pages ----------
+  - name: home
+    label: Home page
+    type: file
+    path: content/pages/home.yml
+    format: yaml
+    fields:
+      - { name: greeting, label: Greeting, type: string }
+      - { name: name, label: Name, type: string }
+      - { name: tagline_line1, label: Tagline line 1, type: string }
+      - { name: tagline_line2, label: Tagline line 2, type: string }
+      - { name: role_prefix, label: Role prefix, type: string }
+      - { name: role, label: Role, type: string }
+      - { name: specialties, label: Specialties, type: string }
+      - { name: values, label: Values, type: string }
+      - { name: footer_cta, label: Footer CTA text, type: string }
+      - { name: email, label: Email, type: string }
+      - { name: follow_label, label: Follow label, type: string }
+      - { name: copyright, label: Copyright, type: string }
+
+  - name: contact
+    label: Contact page
+    type: file
+    path: content/pages/contact.yml
+    format: yaml
+    fields:
+      - { name: email, label: Email, type: string }
+      - { name: heading_prefix, label: Heading prefix, type: string }
+      - { name: heading_highlight, label: Heading highlight word, type: string }
+      - { name: heading_suffix, label: Heading suffix, type: string }
+      - { name: cta_label, label: Button label, type: string }

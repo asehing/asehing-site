@@ -1,0 +1,2 @@
+import{t as e}from"./rolldown-runtime.Dh6celcD.mjs";function t(e,t){return{description:`Made with Framer`,favicon:`/_fr/fu/assets/U0DIRSFx4DtxPODLv3yTxlqo1I.png`,robots:`max-image-preview:large`,title:`My Framer Site`}}var n=e((()=>{}));export{t as n,n as t};
+//# sourceMappingURL=shared-lib.BkSfnEDZ.mjs.map

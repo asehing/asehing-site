@@ -1,0 +1,23 @@
+{
+  "home": {
+    "greeting": "Hi, I’m",
+    "name": "Ase!",
+    "tagline_line1": "I care less about making things louder",
+    "tagline_line2": "and more about making them clearer.",
+    "role_prefix": "I’m a",
+    "role": "Visual Designer",
+    "specialties": "brands, interfaces, and campaigns",
+    "values": "clarity, restraint, and intention.",
+    "footer_cta": "Drop me a line at",
+    "email": "hoasebawana@gmail.com",
+    "follow_label": "Follow us on",
+    "copyright": "©asehing"
+  },
+  "contact": {
+    "email": "hoasebawana@gmail.com",
+    "heading_prefix": "Want to",
+    "heading_highlight": "collaborate",
+    "heading_suffix": "with me?",
+    "cta_label": "Schedule a Call"
+  }
+}
