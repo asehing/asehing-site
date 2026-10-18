@@ -1,0 +1,136 @@
+// Writes content/work/*.md into Framer's binary CMS files (*.framercms) so the original Framer
+// runtime — gallery, filters, case-study pages — renders edited, added or removed projects.
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import YAML from 'yaml';
+import { imageSize } from 'image-size';
+import * as F from './framercms.mjs';
+
+const MODS = '_fr/fu/modules';
+const WORK = { dir: 'DIch7uQASFMGbNcbxi1F/WttOqDaWLGsVnFA7m2Y8', id: 'oscPA9U2n' };
+const CATS = { dir: 'CcZFeQjEQLxSdtL4htaQ/u1xZvjBaG5DEsfmDpbaY', id: 'SDrVS_ZA3' };
+const FORMATS = { Landscape: 'Fn7iDY5zI', Square: 'zyhv81YEw', Portrait: 'iW6YTEclG' };
+
+// field ids of the Works collection
+const K = { title: 'eJJzAsHmF', slug: 'eCTk6zZz1', image: 'K7yODsbzQ', year: 'ssxCV9rFA', category: 'xS8eEi8b_',
+  format: 'u64w3zG7a', summary: 'RqkAdNZcc', client: 'w36dRNKnL', role: 'jBkEVE9n0', gallery: 'OPO6wfhZh', wip: 'Bdv_dfnI3' };
+
+const get = (it, key) => it.fields.find((f) => f.key === key);
+const text = (it, key) => { const f = get(it, key); return f ? F.getStr(f.t, f.v) : ''; };
+const setField = (it, key, t, v) => { const f = get(it, key); if (f) { f.t = t; f.v = v; } else it.fields.push({ key, t, v }); };
+
+export async function readWork() {
+  const items = [];
+  for (const f of (await fs.readdir('content/work')).sort()) {
+    if (!f.endsWith('.md')) continue;
+    const raw = await fs.readFile(`content/work/${f}`, 'utf8');
+    const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    const d = m ? YAML.parse(m[1]) || {} : {};
+    items.push({ ...d, slug: String(d.slug || f.replace(/\.md$/, '')) });
+  }
+  return items;
+}
+
+async function imageJson(srcPath, siteDir) {
+  const file = path.join(siteDir, srcPath);
+  const { width: w, height: h } = imageSize(await fs.readFile(file));
+  const q = (s) => `${srcPath}?${s}width=${w}&height=${h}`;
+  return JSON.stringify({ src: q(''), srcSet: [512, 1024, 2048].filter((s) => s < w).map((s) => `${q(`scale-down-to=${s}&`)} ${s}w`).concat(`${q('')} ${w}w`).join(','), pixelWidth: w, pixelHeight: h });
+}
+
+const newId = (used) => { const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_'; let id; do { id = Array.from({ length: 9 }, () => A[Math.floor(Math.random() * A.length)]).join(''); } while (used.has(id)); used.add(id); return id; };
+
+export async function buildWorkCms(siteDir, outDir) {
+  const rd = (c, kind) => fs.readFile(path.join(siteDir, MODS, c.dir, `${c.id}-${kind}-default-0.framercms`));
+  const catItems = F.parseChunk(await rd(CATS, 'chunk'));
+  const catId = new Map(catItems.map((it) => [text(it, 'TItmD7KBp'), text(it, 'id')]));
+  const orig = F.parseChunk(await rd(WORK, 'chunk'));
+  const tmplIndex = F.parseIndex(await rd(WORK, 'indexes'));
+  const used = new Set(orig.map((it) => text(it, 'id')));
+
+  const content = await readWork();
+  const bySlug = new Map(content.map((c) => [c.slug, c]));
+  const origSlugs = new Set(orig.map((it) => text(it, K.slug)));
+  const now = Date.now();
+
+  const applied = (it, c, isNew) => {
+    const before = it.fields.map((f) => `${f.key}:${f.t}:${f.v.toString('hex')}`).join('|');
+    const S = (key, val) => setField(it, key, 0x0c, F.strVal(String(val ?? '')));
+    S(K.title, c.title); S(K.slug, c.slug); S(K.year, c.year); S(K.summary, c.summary); S(K.client, c.client); S(K.role, c.role);
+    const cid = catId.get(c.category);
+    if (!cid) throw new Error(`work/${c.slug}: unknown category "${c.category}" (known: ${[...catId.keys()].join(', ')})`);
+    S(K.category, cid);
+    const fid = FORMATS[c.format || 'Landscape'];
+    if (!fid) throw new Error(`work/${c.slug}: format must be Landscape, Square or Portrait`);
+    setField(it, K.format, 0x05, F.strVal(fid));
+    setField(it, K.wip, 0x02, Buffer.from([c.in_progress ? 1 : 0]));
+    const cur = get(it, K.image);
+    const curSrc = cur ? JSON.parse(F.getStr(cur.t, cur.v)).src : '';
+    const curName = curSrc.split('?')[0].split('/').pop();
+    return { before, changedImage: !!(c.image && c.image.split('/').pop() !== curName) };
+  };
+
+  // keep original order for existing projects, append new ones
+  const items = [];
+  for (const o of orig) {
+    const c = bySlug.get(text(o, K.slug)); if (!c) continue;
+    const it = { fields: o.fields.map((f) => ({ ...f })) };
+    const { before, changedImage } = applied(it, c, false);
+    if (changedImage) setField(it, K.image, 0x0a, F.strVal(await imageJson(c.image, siteDir)));
+    const after = it.fields.map((f) => `${f.key}:${f.t}:${f.v.toString('hex')}`).join('|');
+    if (after !== before) setField(it, 'updatedAt', 0x04, F.int64(now));
+    items.push(it);
+  }
+  const base = orig[0].fields.filter((f) => !['id', 'createdAt', 'updatedAt', 'previousItemId', 'nextItemId'].includes(f.key));
+  for (const c of content.filter((x) => !origSlugs.has(x.slug))) {
+    if (!c.image) throw new Error(`work/${c.slug}: image is required for a new project`);
+    const it = { fields: [{ key: 'id', t: 0x0c, v: F.strVal(newId(used)) }, { key: 'createdAt', t: 0x04, v: F.int64(now) }, { key: 'updatedAt', t: 0x04, v: F.int64(now) },
+      ...base.filter((f) => ![K.gallery].includes(f.key)).map((f) => ({ ...f })), { key: K.gallery, t: 0x01, v: Buffer.from([0, 0]) }] };
+    applied(it, c, true);
+    setField(it, K.image, 0x0a, F.strVal(await imageJson(c.image, siteDir)));
+    items.push(it);
+  }
+
+  // prev/next chain: fields sit right after updatedAt
+  items.forEach((it, i) => {
+    it.fields = it.fields.filter((f) => f.key !== 'previousItemId' && f.key !== 'nextItemId');
+    const at = it.fields.findIndex((f) => f.key === 'updatedAt') + 1;
+    const link = [];
+    if (i > 0) link.push({ key: 'previousItemId', t: 0x0c, v: get(items[i - 1], 'id').v });
+    if (i < items.length - 1) link.push({ key: 'nextItemId', t: 0x0c, v: get(items[i + 1], 'id').v });
+    it.fields.splice(at, 0, ...link);
+  });
+
+  const { buf: chunk, locs } = F.serChunk(items);
+  const { buf: indexes, ranges } = F.serIndex(F.genIndex(items, locs, tmplIndex));
+  const wdir = path.join(outDir, MODS, WORK.dir); await fs.mkdir(wdir, { recursive: true });
+  await fs.writeFile(path.join(wdir, `${WORK.id}-chunk-default-0.framercms`), chunk);
+  await fs.writeFile(path.join(wdir, `${WORK.id}-indexes-default-0.framercms`), indexes);
+  // every JS file that hardcodes this collection's index ranges (module + hashed site bundle)
+  let patched = 0;
+  const patch = async (dir) => {
+    for (const e of await fs.readdir(dir, { withFileTypes: true })) {
+      const file = path.join(dir, e.name);
+      if (e.isDirectory()) { await patch(file); continue; }
+      if (!/\.m?js$/.test(e.name)) continue;
+      const src = await fs.readFile(file, 'utf8');
+      if (!src.includes(`${WORK.id}-indexes-default-0.framercms`)) continue;
+      let i = 0;
+      const out = src.replace(/range:\{from:\d+,to:\d+\}/g, (m) => { const r = ranges[i++]; return r ? `range:{from:${r.from},to:${r.to}}` : m; });
+      if (i !== ranges.length) continue;   // a different collection's ranges
+      await fs.writeFile(file, out); patched++;
+    }
+  };
+  await patch(path.join(outDir, '_fr'));
+  if (!patched) throw new Error('no module found to patch index ranges');
+
+  // static detail pages (Framer renders the rest in the browser)
+  const shell = await fs.readFile(path.join(siteDir, 'work/project-01.html'), 'utf8');
+  await fs.mkdir(path.join(outDir, 'work'), { recursive: true });
+  for (const f of await fs.readdir(path.join(outDir, 'work'))) if (f.endsWith('.html') && !bySlug.has(f.slice(0, -5))) await fs.rm(path.join(outDir, 'work', f));
+  for (const c of content) {
+    const p = path.join(outDir, 'work', `${c.slug}.html`);
+    try { await fs.access(p); } catch { await fs.writeFile(p, shell.split('project-01').join(c.slug).split('Project 01').join(c.title.replace(/&/g, '&amp;').replace(/</g, '&lt;'))); }
+  }
+  return { count: items.length, added: content.filter((x) => !origSlugs.has(x.slug)).length };
+}

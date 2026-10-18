@@ -4,4 +4,9 @@ slug: project-12
 image: /_fr/fu/images/dStsLdBSREep67KFUsa4uXPto.png
 year: 2025
 category: UIX
+format: Landscape
+summary: ""
+client: ""
+role: ""
+in_progress: false
 ---

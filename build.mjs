@@ -6,6 +6,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import YAML from 'yaml';
 import { renderCollections, HARD_NAV } from './render.mjs';
+import { buildWorkCms } from './work-cms.mjs';
 
 const SRC = path.resolve('site');
 const OUT = path.resolve('dist');
@@ -52,14 +53,17 @@ async function walk(dir) {
 await walk(OUT);
 
 // Work & Thought are rendered from content/ (render.mjs) instead of the Framer export.
-await fs.rm(path.join(OUT, 'work'), { recursive: true, force: true });
 await fs.rm(path.join(OUT, 'thought'), { recursive: true, force: true });
 const rendered = await renderCollections(OUT);
-console.log(`rendered ${rendered.work} work, ${rendered.thoughts} thought`);
+const w = await buildWorkCms(SRC, OUT);
+console.log(`rendered ${rendered.thoughts} thought; work CMS: ${w.count} projects (${w.added} new)`);
 // Framer's client router would swallow links to /work and /thought; force a normal page load.
-for (const f of ['index.html', 'contact.html']) {
+const framerPages = ['index.html', 'contact.html', 'work.html', ...(await fs.readdir(path.join(OUT, 'work'))).filter((f) => f.endsWith('.html')).map((f) => `work/${f}`)];
+for (const f of framerPages) {
   const p = path.join(OUT, f);
-  await fs.writeFile(p, (await fs.readFile(p, 'utf8')).replace(/<head[^>]*>/, (m) => m + HARD_NAV));
+  // framer/handover = query results baked in at export time; dropping it makes the runtime query the (rebuilt) CMS files
+  const html = (await fs.readFile(p, 'utf8')).replace(/<script type="framer\/handover"[\s\S]*?<\/script>/, '');
+  await fs.writeFile(p, html.replace(/<head[^>]*>/, (m) => m + HARD_NAV));
 }
 
 async function pages(dir, prefix = '') {

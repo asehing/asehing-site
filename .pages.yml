@@ -1,6 +1,7 @@
 # Pages CMS config — https://pagescms.org/docs/configuration/
 # Semua konten masuk ke situs lewat `npm run build` (build.mjs -> dist/).
-# Work & Thoughts di-render dari content/ oleh render.mjs (halaman statis sederhana).
+# Work: ditulis ke data CMS biner Framer (work-cms.mjs) sehingga tampilan Framer asli tetap dipakai.
+# Thoughts: markup Framer asli + isi dari content/ (render.mjs).
 # Letakkan di root repo GitHub. Konten diedit lewat Pages CMS, lalu di-commit ke repo.
 
 media:
@@ -44,7 +45,16 @@ content:
         required: true
         options:
           values: [Graphic Design, UIX, Social Media Design, Exploration, Case Study]
-      - { name: body, label: Case study, type: rich-text }
+      - name: format
+        label: Format (card shape)
+        type: select
+        options:
+          values: [Landscape, Square, Portrait]
+        default: Landscape
+      - { name: summary, label: Summary, type: string }
+      - { name: client, label: Client, type: string }
+      - { name: role, label: Role, type: string }
+      - { name: in_progress, label: In progress, type: boolean }
 
   # ---------- Thought (blog / writing) ----------
   - name: thought

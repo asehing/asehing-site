@@ -165,32 +165,17 @@ document.querySelectorAll('.card').forEach(function(a){a.hidden=c!=='all'&&a.dat
 </script>`;
 
 export async function renderCollections(out) {
-  // ---- Work ----
-  const work = (await readCollection('content/work')).sort((a, b) =>
-    String(b.year).localeCompare(String(a.year)) || String(a.title).localeCompare(String(b.title), undefined, { numeric: true }));
-  const cats = [...new Set(work.map((w) => w.category).filter(Boolean))];
-  const filters = `<div class="filters"><button data-cat="all" aria-pressed="true">All<span>${work.length}</span></button>` +
-    cats.map((c) => `<button data-cat="${slugify(c)}" aria-pressed="false">${esc(c)}<span>${work.filter((w) => w.category === c).length}</span></button>`).join('') + '</div>';
-  const cards = work.map((w) => `<a class="card" href="/work/${esc(w.slug)}" data-cat="${slugify(w.category || '')}">` +
-    `${w.image ? `<img src="${esc(w.image)}" alt="${esc(w.title)}" loading="lazy">` : ''}<h2>${esc(w.title)}</h2><p>${esc(w.category)} · ${esc(w.year)}</p></a>`).join('');
-  await write(out, 'work.html', layout({ title: 'Work — Ase!', description: 'Selected work.', current: '/work',
-    main: `<h1>Work</h1>${filters}<div class="grid">${cards}</div>`, script: FILTER_JS }));
-  for (const w of work) {
-    await write(out, `work/${w.slug}.html`, detailLayout({ title: `${w.title} — Ase!`, description: `${w.category} · ${w.year}`,
-      backHref: '/work', heading: w.title, sub: `${w.category} · ${w.year}`, image: w.image, bodyHtml: marked.parse(w.body || '') }));
-  }
-
   // ---- Thought ----
   const thoughts = (await readCollection('content/thought')).sort((a, b) => new Date(b.date) - new Date(a.date));
   await renderThoughtsFramer(out, thoughts);
 
   // ---- sitemap (replaces Framer's) ----
-  const urls = ['/', '/work', '/contact', '/thought', ...work.map((w) => `/work/${w.slug}`), ...thoughts.map((t) => `/thought/${t.slug}`)];
+  const urls = ['/', '/work', '/contact', '/thought', ...thoughts.map((t) => `/thought/${t.slug}`)];
   await write(out, 'sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>https://asehing.com${u === '/' ? '' : u}</loc></url>`).join('')}</urlset>\n`);
-  return { work: work.length, thoughts: thoughts.length };
+  return { thoughts: thoughts.length };
 }
 
-// Framer's client router would swallow links to /work and /thought and render its own (stale) pages.
+// Framer's client router would swallow links to /thought and render its own (stale) pages.
 export const HARD_NAV = `<script>window.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');
 if(!a||e.defaultPrevented||e.metaKey||e.ctrlKey||e.shiftKey)return;var u=new URL(a.href,location.href);
-if(u.origin===location.origin&&/^\\/(work|thought)(\\/|$)/.test(u.pathname)){e.preventDefault();e.stopImmediatePropagation();location.href=u.href}},true)</script>`;
+if(u.origin===location.origin&&/^\\/(thought)(\\/|$)/.test(u.pathname)){e.preventDefault();e.stopImmediatePropagation();location.href=u.href}},true)</script>`;
