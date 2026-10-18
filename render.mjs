@@ -67,10 +67,53 @@ function layout({ title, description = '', current, main, script = '' }) {
 <footer><div class="wrap">©asehing</div></footer>${script}</body></html>`;
 }
 
+
+// Detail pages follow the "Thought - Detail" design: Geist, left "Back" rail, 700px column.
+const DETAIL_CSS = `
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:#fff;font-family:"Geist",system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+h1,h2,h3,h4,p{margin:0}
+.detail{display:flex;min-height:100vh;max-width:1920px;margin:0 auto}
+.rail{width:180px;flex-shrink:0;padding:64px 56px}
+.back{display:flex;align-items:center;gap:8px;text-decoration:none;color:rgb(113,113,123);font-size:20px;line-height:1;white-space:nowrap}
+.back svg{width:16px;height:16px;flex-shrink:0}
+.stage{flex:1 1 0;min-width:0;display:flex;justify-content:center;padding:64px 0 96px}
+.col{width:100%;max-width:700px;display:flex;flex-direction:column;gap:32px}
+.head{padding:0 32px;display:flex;flex-direction:column;gap:4px}
+.head h1{font-size:32px;font-weight:500;color:rgb(38,38,38);letter-spacing:-.02em;line-height:1.2}
+.head p{font-size:18px;color:rgb(113,113,123);letter-spacing:.01em;line-height:1.5}
+.img{height:400px;padding:8px;border:1px solid rgb(228,228,231);border-radius:14.7px;overflow:hidden}
+.img div{height:100%;border:1px solid rgb(212,212,216);border-radius:8px;overflow:hidden;background:#fff}
+.img img{width:100%;height:100%;object-fit:cover;display:block}
+.body{display:flex;flex-direction:column;gap:24px;padding-top:8px}
+.body>*{margin:0;padding:0 32px;font-size:18px;font-weight:400;color:rgb(113,113,123);letter-spacing:.01em;line-height:1.5;text-wrap:balance}
+.body>blockquote{border-left:3px solid rgb(159,159,169)}
+.body>blockquote p{margin:0}.body>blockquote p+p{margin-top:1.5em}
+.body img{max-width:100%;height:auto;border-radius:8px}
+.body h2,.body h3{color:rgb(38,38,38);font-weight:500;letter-spacing:-.01em}
+.body ul,.body ol{padding-left:56px}
+@media(max-width:800px){.detail{flex-direction:column}.rail{width:auto;padding:24px 20px 0}.stage{padding:24px 0 64px}.head,.body>*{padding-left:20px;padding-right:20px}.img{height:auto;aspect-ratio:7/4;margin:0 20px}}
+`;
+const BACK_ICON = '<svg viewBox="0 0 16 11" fill="none" aria-hidden="true"><path d="M14.5 10.2422V7.24219C14.5 6.42969 13.8438 5.74219 13 5.74219H2.5625L5.53125 8.71094C5.8125 8.99219 5.8125 9.49219 5.53125 9.77344C5.25 10.0547 4.75 10.0547 4.46875 9.77344L0.21875 5.52344C0.09375 5.39844 0 5.17969 0 4.99219C0 4.80469 0.09375 4.61719 0.21875 4.46094L4.46875 0.210938C4.75 -0.0703125 5.25 -0.0703125 5.53125 0.210938C5.8125 0.492188 5.8125 0.992188 5.53125 1.27344L2.5625 4.24219H13C14.6562 4.24219 16 5.58594 16 7.24219V10.2422C16 10.6484 15.6562 10.9922 15.25 10.9922C14.8438 10.9922 14.5 10.6484 14.5 10.2422Z" fill="#71717B"/></svg>';
+
+function detailLayout({ title, description = '', backHref, heading, sub, image, bodyHtml }) {
+  return `<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(title)}</title><meta name="description" content="${esc(description)}">
+<meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(description)}">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+<style>${DETAIL_CSS}</style></head><body>
+<div class="detail"><nav class="rail"><a class="back" href="${backHref}">${BACK_ICON}<span>Back</span></a></nav>
+<main class="stage"><article class="col"><div class="head"><h1>${esc(heading)}</h1><p>${esc(sub)}</p></div>
+${image ? `<div class="img"><div><img src="${esc(image)}" alt=""></div></div>` : ''}
+<div class="body">${bodyHtml}</div></article></main></div></body></html>`;
+}
+
 async function write(out, rel, html) {
   const file = path.join(out, rel);
   await fs.mkdir(path.dirname(file), { recursive: true });
-  await fs.writeFile(file, html);
+  await fs.writeFile(file, html.replaceAll("https://asehing.framer.website", "https://asehing.com"));
 }
 
 const FILTER_JS = `<script>
@@ -91,10 +134,8 @@ export async function renderCollections(out) {
   await write(out, 'work.html', layout({ title: 'Work — Ase!', description: 'Selected work.', current: '/work',
     main: `<h1>Work</h1>${filters}<div class="grid">${cards}</div>`, script: FILTER_JS }));
   for (const w of work) {
-    await write(out, `work/${w.slug}.html`, layout({ title: `${w.title} — Ase!`, description: `${w.category} · ${w.year}`, current: '/work',
-      main: `<article><h1>${esc(w.title)}</h1><p class="meta">${esc(w.category)} · ${esc(w.year)}</p>` +
-        `${w.image ? `<img class="hero" src="${esc(w.image)}" alt="${esc(w.title)}">` : ''}${marked.parse(w.body || '')}` +
-        `<a class="back" href="/work">← Back to work</a></article>` }));
+    await write(out, `work/${w.slug}.html`, detailLayout({ title: `${w.title} — Ase!`, description: `${w.category} · ${w.year}`,
+      backHref: '/work', heading: w.title, sub: `${w.category} · ${w.year}`, image: w.image, bodyHtml: marked.parse(w.body || '') }));
   }
 
   // ---- Thought ----
@@ -104,14 +145,13 @@ export async function renderCollections(out) {
     main: `<h1>Thoughts</h1><ul class="list">${list}</ul>` }));
   for (const t of thoughts) {
     const plain = marked.parse(t.body || '').replace(/<[^>]+>/g, '').slice(0, 160);
-    await write(out, `thought/${t.slug}.html`, layout({ title: `${t.title} — Ase!`, description: plain, current: '/thought',
-      main: `<article><h1>${esc(t.title)}</h1><p class="meta">${fmtDate(t.date)}</p>` +
-        `${t.cover ? `<img class="hero" src="${esc(t.cover)}" alt="">` : ''}${marked.parse(t.body || '')}<a class="back" href="/thought">← Back to thoughts</a></article>` }));
+    await write(out, `thought/${t.slug}.html`, detailLayout({ title: `${t.title} — Ase!`, description: plain,
+      backHref: '/thought', heading: t.title, sub: fmtDate(t.date), image: t.cover, bodyHtml: marked.parse(t.body || '') }));
   }
 
   // ---- sitemap (replaces Framer's) ----
   const urls = ['/', '/work', '/contact', '/thought', ...work.map((w) => `/work/${w.slug}`), ...thoughts.map((t) => `/thought/${t.slug}`)];
-  await write(out, 'sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${u}</loc></url>`).join('')}</urlset>\n`);
+  await write(out, 'sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>https://asehing.com${u === '/' ? '' : u}</loc></url>`).join('')}</urlset>\n`);
   return { work: work.length, thoughts: thoughts.length };
 }
 

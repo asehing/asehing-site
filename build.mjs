@@ -51,15 +51,28 @@ async function walk(dir) {
 }
 await walk(OUT);
 
-// Work & Thought are rendered from content/ without the Framer runtime.
+// Work & Thought are rendered from content/ (render.mjs) instead of the Framer export.
 await fs.rm(path.join(OUT, 'work'), { recursive: true, force: true });
 await fs.rm(path.join(OUT, 'thought'), { recursive: true, force: true });
-const n = await renderCollections(OUT);
+const rendered = await renderCollections(OUT);
+console.log(`rendered ${rendered.work} work, ${rendered.thoughts} thought`);
+// Framer's client router would swallow links to /work and /thought; force a normal page load.
 for (const f of ['index.html', 'contact.html']) {
   const p = path.join(OUT, f);
   await fs.writeFile(p, (await fs.readFile(p, 'utf8')).replace(/<head[^>]*>/, (m) => m + HARD_NAV));
 }
-console.log(`rendered ${n.work} work, ${n.thoughts} thought`);
+
+async function pages(dir, prefix = '') {
+  const out = [];
+  for (const e of await fs.readdir(dir, { withFileTypes: true })) {
+    if (e.isDirectory()) { if (!e.name.startsWith('_')) out.push(...await pages(path.join(dir, e.name), `${prefix}/${e.name}`)); }
+    else if (e.name.endsWith('.html')) out.push(e.name === 'index.html' ? prefix || '/' : `${prefix}/${e.name.slice(0, -5)}`);
+  }
+  return out;
+}
+const urls = (await pages(OUT)).sort();
+await fs.writeFile(path.join(OUT, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>https://asehing.com${u === '/' ? '' : u}</loc></url>`).join('')}</urlset>\n`);
+console.log(`built ${urls.length} pages`);
 
 for (const [j, n] of counts) console.log(`${j.page}.${j.key}: ${n} replacement(s)`);
 if (!jobs.length) console.log('No content changes; dist is a plain copy of site.');
