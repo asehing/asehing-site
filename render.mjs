@@ -110,6 +110,48 @@ ${image ? `<div class="img"><div><img src="${esc(image)}" alt=""></div></div>` :
 <div class="body">${bodyHtml}</div></article></main></div></body></html>`;
 }
 
+// ---- Thought pages: pixel-identical Framer markup (SSR HTML + CSS, no runtime), content swapped in ----
+const stripScripts = (html) => html.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<link[^>]*rel="modulepreload"[^>]*>/g, '');
+const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const iso = (d) => (d instanceof Date ? d : new Date(d)).toISOString().slice(0, 10) + 'T00:00:00.000Z';
+const setMeta = (html, title, desc) => html
+  .replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`)
+  .replace(/(<meta (?:property="og:title"|name="twitter:title") content=")[^"]*"/g, `$1${esc(title)}"`)
+  .replace(/(<meta (?:name="description"|property="og:description"|name="twitter:description") content=")[^"]*"/g, `$1${esc(desc)}"`);
+
+function framerBody(md) {
+  return marked.parse(md || '')
+    .replace(/<p>/g, '<p dir="auto" class="framer-text framer-styles-preset-15p98y5">')
+    .replace(/<blockquote>/g, '<blockquote class="framer-text framer-styles-preset-1oz2nmo">')
+    .replace(/<(em|strong|a|li|ul|ol|h[1-6]|code)([ >])/g, '<$1 class="framer-text"$2')
+    .replace(/<br\s*\/?>/g, '<br class="framer-text trailing-break">'.replace(' trailing-break', ''))
+    .replace(/\n/g, '');
+}
+
+async function renderThoughtsFramer(out, thoughts) {
+  const SAMPLE = { title: 'Menembus kabut kegagalan', slug: 'menembus-kabut-kegagalan' };
+  const detail = stripScripts(await fs.readFile('site/thought/menembus-kabut-kegagalan.html', 'utf8'));
+  for (const t of thoughts) {
+    let html = detail.split(SAMPLE.title).join(esc(t.title))
+      .split(`thought/${SAMPLE.slug}`).join(`thought/${t.slug}`)
+      .replace(/<time datetime="[^"]*">[^<]*<\/time>/g, `<time datetime="${iso(t.date)}">${fmtDate(t.date)}</time>`);
+    html = html.replace(/(data-framer-name="Content \(CMS\)"[^>]*>)[\s\S]*?(<\/div>)/, (_, a, b) => a + framerBody(t.body) + b);
+    const plain = marked.parse(t.body || '').replace(/<[^>]+>/g, '').slice(0, 160);
+    await write(out, `thought/${t.slug}.html`, setMeta(html, `${t.title} — Ase!`, plain));
+  }
+  let list = stripScripts(await fs.readFile('site/thought.html', 'utf8'));
+  const rowRe = /<!--\$--><a class="framer-15blm0i[^>]*data-framer-name="Thought Row"[\s\S]*?<\/a><!--\/\$-->/g;
+  const rows = list.match(rowRe);
+  const first = rows[0];
+  const sTitle = 'Menit-menit tambahan, sebelum akhir', sSlug = 'menit-menit-tambahan-sebelum-akhir';
+  const made = thoughts.map((t) => first.split(sTitle).join(esc(t.title)).split(sSlug).join(t.slug)
+    .replace(/<time datetime="[^"]*">[^<]*<\/time>/g, `<time datetime="${iso(t.date)}">${fmtDate(t.date)}</time>`)).join('');
+  list = list.replace(rows[0], '\0ROWS\0');
+  for (const r of rows.slice(1)) list = list.replace(r, '');
+  list = list.replace('\0ROWS\0', () => made);
+  await write(out, 'thought.html', setMeta(list, 'Thoughts — Ase!', 'Writing.'));
+}
+
 async function write(out, rel, html) {
   const file = path.join(out, rel);
   await fs.mkdir(path.dirname(file), { recursive: true });
@@ -140,14 +182,7 @@ export async function renderCollections(out) {
 
   // ---- Thought ----
   const thoughts = (await readCollection('content/thought')).sort((a, b) => new Date(b.date) - new Date(a.date));
-  const list = thoughts.map((t) => `<li><a href="/thought/${esc(t.slug)}"><span>${esc(t.title)}</span><time datetime="${esc(String(t.date instanceof Date ? t.date.toISOString().slice(0, 10) : t.date))}">${fmtDate(t.date)}</time></a></li>`).join('');
-  await write(out, 'thought.html', layout({ title: 'Thoughts — Ase!', description: 'Writing.', current: '/thought',
-    main: `<h1>Thoughts</h1><ul class="list">${list}</ul>` }));
-  for (const t of thoughts) {
-    const plain = marked.parse(t.body || '').replace(/<[^>]+>/g, '').slice(0, 160);
-    await write(out, `thought/${t.slug}.html`, detailLayout({ title: `${t.title} — Ase!`, description: plain,
-      backHref: '/thought', heading: t.title, sub: fmtDate(t.date), image: t.cover, bodyHtml: marked.parse(t.body || '') }));
-  }
+  await renderThoughtsFramer(out, thoughts);
 
   // ---- sitemap (replaces Framer's) ----
   const urls = ['/', '/work', '/contact', '/thought', ...work.map((w) => `/work/${w.slug}`), ...thoughts.map((t) => `/thought/${t.slug}`)];

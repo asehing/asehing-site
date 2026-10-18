@@ -1,6 +1,29 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "site", "runtimeExecutable": "npx", "runtimeArgs": ["--yes", "serve", "site", "-l", "4173"], "port": 4173 }
+    {
+      "name": "site",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "--yes",
+        "serve",
+        "site",
+        "-l",
+        "4173"
+      ],
+      "port": 4173
+    },
+    {
+      "name": "dist",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "--yes",
+        "serve",
+        "dist",
+        "-l",
+        "4174"
+      ],
+      "port": 4174
+    }
   ]
 }
