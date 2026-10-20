@@ -31,6 +31,7 @@ const sliceRanges = (_, u, o, r, w, check, buf) =>
 
 function rewrite(text) {
   return text
+    .replaceAll('My Framer Site', 'Ase Hing')
     .replace(RANGE_RE, sliceRanges)
     .replaceAll('.href.replace(`/modules/`,`/cms/`)', '.href')
     .replace(/new URL\(`([^`]+)`,`(https:\/\/(?:framerusercontent\.com|fonts\.gstatic\.com)\/[^`]+)`\)/g,

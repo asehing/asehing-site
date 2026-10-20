@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://asehing.com/sitemap.xml
