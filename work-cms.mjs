@@ -40,6 +40,22 @@ async function imageJson(srcPath, siteDir) {
 
 const newId = (used) => { const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_'; let id; do { id = Array.from({ length: 9 }, () => A[Math.floor(Math.random() * A.length)]).join(''); } while (used.has(id)); used.add(id); return id; };
 
+
+// Gallery arrays embed image-JSON strings (0x0a + uint32 length + JSON). Re-point CDN URLs to the self-hosted copies.
+function localizeCdn(buf) {
+  const out = []; let pos = 0;
+  const needle = Buffer.from('{"src":"https://framerusercontent.com/');
+  for (;;) {
+    const at = buf.indexOf(needle, pos);
+    if (at < 4 || buf[at - 5] !== 0x0a) { out.push(buf.subarray(pos)); break; }
+    const len = buf.readUInt32BE(at - 4);
+    const json = buf.toString('utf8', at, at + len).replaceAll('https://framerusercontent.com/', '/_fr/fu/');
+    const body = Buffer.from(json, 'utf8'), head = Buffer.alloc(4); head.writeUInt32BE(body.length);
+    out.push(buf.subarray(pos, at - 4), head, body); pos = at + len;
+  }
+  return Buffer.concat(out);
+}
+
 export async function buildWorkCms(siteDir, outDir) {
   const rd = (c, kind) => fs.readFile(path.join(siteDir, MODS, c.dir, `${c.id}-${kind}-default-0.framercms`));
   const catItems = F.parseChunk(await rd(CATS, 'chunk'));
@@ -67,7 +83,8 @@ export async function buildWorkCms(siteDir, outDir) {
     const cur = get(it, K.image);
     const curSrc = cur ? JSON.parse(F.getStr(cur.t, cur.v)).src : '';
     const curName = curSrc.split('?')[0].split('/').pop();
-    return { before, changedImage: !!(c.image && c.image.split('/').pop() !== curName) };
+    // also re-point images that still reference Framer's CDN (https://framerusercontent.com/...) to the self-hosted copy
+    return { before, changedImage: !!(c.image && (c.image.split('/').pop() !== curName || /^https?:/.test(curSrc))) };
   };
 
   // keep original order for existing projects, append new ones
@@ -77,6 +94,7 @@ export async function buildWorkCms(siteDir, outDir) {
     const it = { fields: o.fields.map((f) => ({ ...f })) };
     const { before, changedImage } = applied(it, c, false);
     if (changedImage) setField(it, K.image, 0x0a, F.strVal(await imageJson(c.image, siteDir)));
+    const gal = get(it, K.gallery); if (gal && gal.v.includes('framerusercontent.com')) gal.v = localizeCdn(gal.v);
     const after = it.fields.map((f) => `${f.key}:${f.t}:${f.v.toString('hex')}`).join('|');
     if (after !== before) setField(it, 'updatedAt', 0x04, F.int64(now));
     items.push(it);

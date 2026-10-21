@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs && node security.mjs"
   },
   "dependencies": {
     "image-size": "1.1.1",

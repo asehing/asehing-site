@@ -1,0 +1,4 @@
+Contact: mailto:hoasebawana@gmail.com
+Expires: 2027-10-21T00:00:00.000Z
+Preferred-Languages: id, en
+Canonical: https://asehing.com/.well-known/security.txt
